@@ -1,7 +1,11 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
+
+# Clear matplotlib to prevent stale plots
+plt.close('all')
 
 # -----------------------------
 # Core model
@@ -12,6 +16,20 @@ def run(v=0.0, c=1.0, N=10000, I0=10, d=160, b=0.3, g=0.05):
     v = vaccination fraction
     c = contact/closure factor (1.0 = no closure, lower = stronger closure)
     """
+    # Input validation
+    if N <= 0 or I0 <= 0 or d <= 0:
+        raise ValueError("N, I0, and d must be positive")
+    if I0 > N:
+        I0 = N
+    if v < 0 or v > 1:
+        v = max(0, min(1, v))
+    if c <= 0 or c > 1:
+        c = max(0.01, min(1, c))
+    if b < 0 or b > 1:
+        b = max(0, min(1, b))
+    if g < 0 or g > 1:
+        g = max(0, min(1, g))
+    
     S = N - I0 - v * N
     I = float(I0)
     R = v * N
@@ -91,7 +109,11 @@ st.sidebar.caption("Hints: higher v lowers susceptible population; lower c reduc
 t = np.arange(d)
 fmt = FuncFormatter(lambda x, _: f"{int(x):,}")
 
-S, I, R = run(v=v, c=c, N=N, I0=I0, d=d, b=b, g=g)
+try:
+    S, I, R = run(v=v, c=c, N=N, I0=I0, d=d, b=b, g=g)
+except Exception as e:
+    st.error(f"Error running simulation: {e}")
+    st.stop()
 
 col1, col2 = st.columns(2)
 
@@ -116,6 +138,7 @@ with col1:
     ax.legend()
     ax.yaxis.set_major_formatter(fmt)
     st.pyplot(fig)
+    plt.close(fig)
 
 with col2:
     st.subheader("Summary")
@@ -156,6 +179,7 @@ for ax, (title, (Sx, Ix, Rx)) in zip(axes, scenarios.items()):
     ax.yaxis.set_major_formatter(fmt)
 
 st.pyplot(fig1)
+plt.close(fig1)
 
 # -----------------------------
 # Sensitivity analysis
@@ -168,7 +192,7 @@ with tab1:
     fig2, ax2 = plt.subplots(figsize=(10, 4))
     v_list = [0, 0.2, 0.4, 0.6, 0.8]
 
-    for i, vv in enumerate(v_list):
+    for vv in v_list:
         _, Ii, _ = run(v=vv, c=c, N=N, I0=I0, d=d, b=b, g=g)
         ax2.plot(t, Ii, label=f"Vax {int(vv * 100)}%")
 
@@ -177,12 +201,13 @@ with tab1:
     ax2.legend()
     ax2.yaxis.set_major_formatter(fmt)
     st.pyplot(fig2)
+    plt.close(fig2)
 
 with tab2:
     fig3, ax3 = plt.subplots(figsize=(10, 4))
     c_list = [1.0, 0.8, 0.6, 0.4, 0.2]
 
-    for i, cc in enumerate(c_list):
+    for cc in c_list:
         _, Ii, _ = run(v=v, c=cc, N=N, I0=I0, d=d, b=b, g=g)
         ax3.plot(t, Ii, label=f"Closure {int((1 - cc) * 100)}%")
 
@@ -191,13 +216,12 @@ with tab2:
     ax3.legend()
     ax3.yaxis.set_major_formatter(fmt)
     st.pyplot(fig3)
+    plt.close(fig3)
 
 # -----------------------------
 # Table of values
 # -----------------------------
 with st.expander("Show first 20 days of the selected scenario"):
-    import pandas as pd
-
     df = pd.DataFrame(
         {
             "Day": t,
