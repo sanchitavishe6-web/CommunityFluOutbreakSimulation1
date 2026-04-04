@@ -57,7 +57,7 @@ def run(v=0.0, c=1.0, N=10000, I0=10, d=160, b=0.3, g=0.05):
 # Streamlit UI
 # -----------------------------
 st.set_page_config(page_title="Community Flu Outbreak Simulation", layout="wide")
-st.title("Community Flu Outbreak Simulation Dashboard")
+st.title("Community Flu Outbreak Simulation")
 
 st.write(
     "Use the controls to explore how vaccination and closures affect the spread. "
